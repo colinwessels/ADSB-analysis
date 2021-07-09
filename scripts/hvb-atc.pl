@@ -4,9 +4,12 @@
 
 # ./sbs1-id.pl 20200511 MW-ADSB
 
+my $date = shift;
 
-$dirname=$ARGV[0];
-$site=$ARGV[1];
+$dirname="/home/colin/example-project/data/$date";
+die "$dirname: $!" unless -d $dirname;
+
+$site='MW-ADSB';
 if($site eq ""){die "use sbs1-id.pl directory site"};
 
 $idtstamp=0;
@@ -23,15 +26,14 @@ $dtime=10;	# delta time for clustering
 #$minlon=-118.63;
 #$maxlon=-118.62;
 
-$starttime=0;
-#$starttime=7*3600;		# number of seconds from beginning of file
-$endtime=$starttime+(1*3600);	# number of seconds from beginning of file
+$starttime=7*3600;		# number of seconds from beginning of file
+$endtime=$starttime+(1*80);	# number of seconds from beginning of file
 
-open(ID,"$dirname/198.202.124.3-HPWREN_${site}_1_1_0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN_${site}_1_1_0");
-open(IC,"$dirname/198.202.124.3-HPWREN_${site}_3_1_0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN_${site}_3_1_0");
+open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:1:1:0");
+open(IC,"$dirname/198.202.124.3-HPWREN:${site}:3:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:3:1:0");
 
-$OF = "$dirname/sbs12all-$site.kml";
-open(O,">$OF") || die("Cannot open output kml file $OF: $!");
+$OF = "/home/colin/example-project/results/$date.kml";
+open(O,">$OF") || die "$OF: $!";
 printf O "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
 printf O "<kml xmlns=\"http://earth.google.com/kml/2.0\">\n";
 printf O " <Document>\n";
