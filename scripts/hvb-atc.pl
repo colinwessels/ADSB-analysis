@@ -1,6 +1,9 @@
+# To run from perl cmd, do 'perl hvb-atc.pl "D:\Users\Colin Wessels\Documents\HVB Project" MW-ADSB
+
 #!/usr/local/bin/perl
 
 # ./sbs1-id.pl 20200511 MW-ADSB
+
 
 $dirname=$ARGV[0];
 $site=$ARGV[1];
@@ -20,13 +23,15 @@ $dtime=10;	# delta time for clustering
 #$minlon=-118.63;
 #$maxlon=-118.62;
 
-$starttime=7*3600;		# number of seconds from beginning of file
+$starttime=0;
+#$starttime=7*3600;		# number of seconds from beginning of file
 $endtime=$starttime+(1*3600);	# number of seconds from beginning of file
 
-open(ID,"$dirname/198.202.124.3-HPWREN:$site:1:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:$site:1:1:0");
-open(IC,"$dirname/198.202.124.3-HPWREN:$site:3:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:$site::1:0");
+open(ID,"$dirname/198.202.124.3-HPWREN_${site}_1_1_0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN_${site}_1_1_0");
+open(IC,"$dirname/198.202.124.3-HPWREN_${site}_3_1_0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN_${site}_3_1_0");
 
-open(O,">sbs12all-$dirname-$site.kml") || die("Cannot open output kml file");
+$OF = "$dirname/sbs12all-$site.kml";
+open(O,">$OF") || die("Cannot open output kml file $OF: $!");
 printf O "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
 printf O "<kml xmlns=\"http://earth.google.com/kml/2.0\">\n";
 printf O " <Document>\n";
@@ -96,13 +101,33 @@ printf O "    <outline>0</outline>\n";
 printf O "   </PolyStyle>\n";
 printf O "  </Style>\n";
 printf O "\n";
-printf O "  <Style id=\"ToGround\">\n";
+printf O "  <Style id=\"ToGroundLow\">\n"; #diffeernt styles have different colors
 printf O "   <LineStyle>\n";
 printf O "    <color>7f0000ff</color>\n";
 printf O "    <width>2</width>\n";
 printf O "   </LineStyle>\n";
 printf O "   <PolyStyle>\n";
 printf O "    <color>5f0000ff</color>\n";
+printf O "   </PolyStyle>\n";
+printf O "  </Style>\n";
+printf O "\n";
+printf O "  <Style id=\"ToGroundMid\">\n";
+printf O "   <LineStyle>\n";
+printf O "    <color>7f00ff0d</color>\n";
+printf O "    <width>2</width>\n";
+printf O "   </LineStyle>\n";
+printf O "   <PolyStyle>\n";
+printf O "    <color>5f00ff0d</color>\n";
+printf O "   </PolyStyle>\n";
+printf O "  </Style>\n";
+printf O "\n";
+printf O "  <Style id=\"ToGroundHigh\">\n";
+printf O "   <LineStyle>\n";
+printf O "    <color>7fff0000</color>\n";
+printf O "    <width>2</width>\n";
+printf O "   </LineStyle>\n";
+printf O "   <PolyStyle>\n";
+printf O "    <color>5fff0000</color>\n";
 printf O "   </PolyStyle>\n";
 printf O "  </Style>\n";
 printf O "\n";
@@ -115,6 +140,18 @@ printf O "   <PolyStyle>\n";
 printf O "    <color>5f00ffff</color>\n";
 printf O "   </PolyStyle>\n";
 printf O "  </Style>\n";
+
+sub StyleFromAltitude
+{
+	my $alt = shift;
+ if($alt > 8500) {	#sets style based on alt -cw
+   return "ToGroundHigh";
+ } elsif($alt >= 5000 && $alt <= 8500) {
+   return "ToGroundMid";
+ } else {
+   return "ToGroundLow";
+ }
+}
 
 while(<IC>) {
  ($icorig,$icid,$ictstamp,$icparm,@r)=split(" ",$_);
@@ -160,9 +197,16 @@ while(<IC>) {
   }
 #  printf"$ictstamp - $IDT: $LAT - $LON - $ALT\n";
  }
+ 
+
+
+
+
+
 
  if($ictstamp >= ($oictstamp+$dtime)){
   foreach $key (sort(keys %T)){
+#	  next unless($callsign{$key} eq 'FFT1150');
    if($T{$key} > ($ictstamp-$maxage)){
 #    printf"$ictstamp - %s %s: %s, %s, %s\n",
 #     $key,$callsign{$key},$latitude{$key,$ix{$key}},$longitude{$key,$ix{$key}},$altitude{$key,$ix{$key}};
@@ -179,11 +223,13 @@ while(<IC>) {
     if(($latitude{$key,$ix{$key}} ne "") && ($longitude{$key,$ix{$key}} ne "")){
      if($callsign{$key} eq ""){$callsign{$key}="unkn"};
 #
+    
 #red line to ground
 #place plus yellow line via old value(s)
      printf O "\n";
      printf O "  <Placemark>\n";
-     printf O "   <name>%s %s</name>\n",$callsign{$key},$altitude{$key,$ix{$key}}/0.305;
+#     printf O "   <name>%s %s</name>\n",$callsign{$key},$altitude{$key,$ix{$key}}/0.305;
+     printf O "   <name>%s</name>\n",$callsign{$key};
      printf O "   <TimeSpan>\n";
      printf O "   <begin>$tstring</begin>\n";
      printf O "   <end>$tstringend</end>\n";
@@ -195,9 +241,11 @@ while(<IC>) {
      printf O "   </Point>\n";
      printf O "  </Placemark>\n";
 #
+
      printf O "\n";
      printf O "  <Placemark>\n";
-     printf O "   <styleUrl>#ToGround</styleUrl>\n";
+	 printf STDERR "%s %f %s\n", $callsign{$key}, $altitude{$key,$ix{$key}}, StyleFromAltitude($altitude{$key,$ix{$key}});
+     printf O "   <styleUrl>#%s</styleUrl>\n", StyleFromAltitude($altitude{$key,$ix{$key}});
      printf O "   <TimeSpan>\n";
      printf O "   <begin>$tstring</begin>\n";
      printf O "   <end>$tstringend</end>\n";
