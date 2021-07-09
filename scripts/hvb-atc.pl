@@ -1,13 +1,14 @@
-# To run from perl cmd, do 'perl hvb-atc.pl "D:\Users\Colin Wessels\Documents\HVB Project" MW-ADSB
+# To run from perl cmd, do 'perl hvb-atc.pl [date] [hours]
 
 #!/usr/local/bin/perl
 
 # ./sbs1-id.pl 20200511 MW-ADSB
 
 my $date = shift;
+my $hours = shift;
 
 $dirname="/home/colin/example-project/data/$date";
-die "$dirname: $!" unless -d $dirname;
+#die "$dirname: $!" unless -d $dirname;
 
 $site='MW-ADSB';
 if($site eq ""){die "use sbs1-id.pl directory site"};
@@ -27,9 +28,20 @@ $dtime=10;	# delta time for clustering
 #$maxlon=-118.62;
 
 $starttime=7*3600;		# number of seconds from beginning of file
-$endtime=$starttime+(1*80);	# number of seconds from beginning of file
+$endtime=$starttime+($hours*3600);	# number of seconds from beginning of file
 
-open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:1:1:0");
+unless (open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0")) { #Prompts user to change $site to wc-adsb if it fails to open file
+ print 'Error opening data. 2019 files use wc-adsb, try that for $site?'; #B/c the data file can only be MW-ADSB or wc-adsb
+ print "\n";
+ my $response = <STDIN>;
+ chomp $response;
+ if($response eq "y") {
+  $site = 'wc-adsb';
+  open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0");
+} else {
+  die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:1:1:0");
+ }
+}
 open(IC,"$dirname/198.202.124.3-HPWREN:${site}:3:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:3:1:0");
 
 $OF = "/home/colin/example-project/results/$date.kml";
