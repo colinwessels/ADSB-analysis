@@ -1,17 +1,24 @@
-# To run from perl cmd, do 'perl hvb-atc.pl [date] [hours]
+# To run from perl cmd, do 'perl hvb-atc.pl [date] [minutes]
 
 #!/usr/local/bin/perl
 
 # ./sbs1-id.pl 20200511 MW-ADSB
+use POSIX;
 
 my $date = shift;
-my $hours = shift;
+my $minutes = shift;
 
 $dirname="/home/colin/example-project/data/$date";
 #die "$dirname: $!" unless -d $dirname;
 
 $site='MW-ADSB';
 if($site eq ""){die "use sbs1-id.pl directory site"};
+
+if($date eq "") {
+	print "Enter date: \n";
+	$date = <STDIN>;
+	chomp $date;
+}
 
 $idtstamp=0;
 $maxage=20;     # max age in seconds
@@ -28,19 +35,12 @@ $dtime=10;	# delta time for clustering
 #$maxlon=-118.62;
 
 $starttime=7*3600;		# number of seconds from beginning of file
-$endtime=$starttime+($hours*3600);	# number of seconds from beginning of file
+$endtime=$starttime+($minutes*60);	# number of seconds from beginning of file
+
 
 unless (open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0")) { #Prompts user to change $site to wc-adsb if it fails to open file
- print 'Error opening data. 2019 files use wc-adsb, try that for $site?'; #B/c the data file can only be MW-ADSB or wc-adsb
- print "\n";
- my $response = <STDIN>;
- chomp $response;
- if($response eq "y") {
-  $site = 'wc-adsb';
-  open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0");
-} else {
-  die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:1:1:0");
- }
+ $site = 'wc-adsb';
+ open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:3:1:0");
 }
 open(IC,"$dirname/198.202.124.3-HPWREN:${site}:3:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:3:1:0");
 
@@ -167,19 +167,32 @@ sub StyleFromAltitude
  }
 }
 
+my $ICLINECNT = 0;
+my $IDLINECNT = 0;
 while(<IC>) {
+	$ICLINECNT++;
+#	printf STDERR "program line %d, IC line %d\n", __LINE__, $ICLINECNT;
  ($icorig,$icid,$ictstamp,$icparm,@r)=split(" ",$_);
- if($orgictstamp eq ""){$orgictstamp=$ictstamp;}
+ if($orgictstamp eq ""){
+	 $orgictstamp=$ictstamp;
+	 print STDERR "start time: ", POSIX::strftime('%F %T', localtime($orgictstamp)), "\n";
+	 print STDERR "end time: ", POSIX::strftime('%F %T', localtime($orgictstamp+$endtime)), "\n";
+	 }
  ($MSG,$TTP,$SID,$AID,$IDT,$FID,
   $GDT,$GTM,$LDT,$LTM,$CSN,$ALT,$GSP,$TRK,
   $LAT,$LON,$VRT,$SQK,$ALE,$EMG,$SPI,$IOG,@r)=split(",",$icparm); 
+  	printf STDERR "\rIC %s ID %s", POSIX::strftime("%F %T", localtime($ictstamp)), POSIX::strftime("%F %T", localtime($ictstamp));
+
 
  if($ictstamp > $idtstamp){
   while(<ID>) {
+	  $IDLINECNT++;
+#	  printf STDERR "program line %d, ID line %d\n", __LINE__, $IDLINECNT;
    ($idorig,$idid,$idtstamp,$idparm,@r)=split(" ",$_);
    ($idMSG,$idTTP,$idSID,$idAID,$idIDT,$idFID,
     $idGDT,$idGTM,$idLDT,$idLTM,$idCSN,$idALT,$idGSP,$idTRK,
     $idLAT,$idLON,$idVRT,$idSQK,$idALE,$idEMG,$idSPI,$idIOG,@r)=split(",",$idparm);
+	printf STDERR "\rIC %s ID %s", POSIX::strftime("%F %T", localtime($ictstamp)), POSIX::strftime("%F %T", localtime($ictstamp));
    if(($idTTP == 1)&&($idCSN ne "")){
     if($callsign{$idIDT} eq ""){
 #     printf"new call sign for $idIDT: $idCSN\n";
@@ -258,7 +271,7 @@ while(<IC>) {
 
      printf O "\n";
      printf O "  <Placemark>\n";
-	 printf STDERR "%s %f %s\n", $callsign{$key}, $altitude{$key,$ix{$key}}, StyleFromAltitude($altitude{$key,$ix{$key}});
+#	 printf STDERR "%s %f %s\n", $callsign{$key}, $altitude{$key,$ix{$key}}, StyleFromAltitude($altitude{$key,$ix{$key}});
      printf O "   <styleUrl>#%s</styleUrl>\n", StyleFromAltitude($altitude{$key,$ix{$key}});
      printf O "   <TimeSpan>\n";
      printf O "   <begin>$tstring</begin>\n";
@@ -316,8 +329,12 @@ while(<IC>) {
   }
   $oictstamp=$ictstamp;
  }
+ 
 # terminate the program after n second
- if($ictstamp > ($orgictstamp+$endtime)){last;}
+ if($ictstamp > ($orgictstamp+$endtime)){
+	 print STDERR "reached endtime\n";
+	 last;
+	 }
 }
 #
 printf O "\n";
@@ -343,3 +360,4 @@ open(CS,">callsignmap.txt") || die("Cannot open output callsign file");
 foreach $key (sort  (keys %callsign)){
  printf CS "%s\t%s\n",$key, $callsign{$key};
 }
+printf STDERR "Read %d lines from IC and %d lines from ID.\n", $ICLINECNT, $IDLINECNT;
