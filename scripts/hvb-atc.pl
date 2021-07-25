@@ -40,7 +40,7 @@ $endtime=$starttime+($minutes*60);	# number of seconds from beginning of file
 
 unless (open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0")) { #Prompts user to change $site to wc-adsb if it fails to open file
  $site = 'wc-adsb';
- open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:3:1:0");
+ open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:1:1:0");
 }
 open(IC,"$dirname/198.202.124.3-HPWREN:${site}:3:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:3:1:0");
 
@@ -117,7 +117,7 @@ printf O "  </Style>\n";
 printf O "\n";
 printf O "  <Style id=\"ToGroundLow\">\n"; #diffeernt styles have different colors
 printf O "   <LineStyle>\n";
-printf O "    <color>7f0000ff</color>\n";
+printf O "    <color>7f0000ff</color>\n"; #color is AABBGGRR
 printf O "    <width>2</width>\n";
 printf O "   </LineStyle>\n";
 printf O "   <PolyStyle>\n";
@@ -145,9 +145,29 @@ printf O "    <color>5fff0000</color>\n";
 printf O "   </PolyStyle>\n";
 printf O "  </Style>\n";
 printf O "\n";
-printf O "  <Style id=\"AirToAir\">\n";
+printf O "  <Style id=\"AirToAirLow\">\n";
 printf O "   <LineStyle>\n";
-printf O "    <color>7f00ffff</color>\n";
+printf O "    <color>7f0000ff</color>\n";
+printf O "    <width>4</width>\n";
+printf O "   </LineStyle>\n";
+printf O "   <PolyStyle>\n";
+printf O "    <color>5f00ffff</color>\n";
+printf O "   </PolyStyle>\n";
+printf O "  </Style>\n";
+printf O "\n";
+printf O "  <Style id=\"AirToAirMid\">\n";
+printf O "   <LineStyle>\n";
+printf O "    <color>7f00ff0d</color>\n";
+printf O "    <width>4</width>\n";
+printf O "   </LineStyle>\n";
+printf O "   <PolyStyle>\n";
+printf O "    <color>5f00ffff</color>\n";
+printf O "   </PolyStyle>\n";
+printf O "  </Style>\n";
+printf O "\n";
+printf O "  <Style id=\"AirToAirHigh\">\n";
+printf O "   <LineStyle>\n";
+printf O "    <color>7fff0000</color>\n";
 printf O "    <width>4</width>\n";
 printf O "   </LineStyle>\n";
 printf O "   <PolyStyle>\n";
@@ -155,15 +175,27 @@ printf O "    <color>5f00ffff</color>\n";
 printf O "   </PolyStyle>\n";
 printf O "  </Style>\n";
 
-sub StyleFromAltitude
+sub GroundStyle
 {
 	my $alt = shift;
- if($alt > 8500) {	#sets style based on alt -cw
+ if($alt > 8500) {	#sets style based on alt
    return "ToGroundHigh";
  } elsif($alt >= 5000 && $alt <= 8500) {
    return "ToGroundMid";
  } else {
    return "ToGroundLow";
+ }
+}
+
+sub AirStyle
+{
+	my $alt = shift;
+ if($alt > 8500) {	#sets style based on alt
+   return "AirToAirHigh";
+ } elsif($alt >= 5000 && $alt <= 8500) {
+   return "AirToAirMid";
+ } else {
+   return "AirToAirLow";
  }
 }
 
@@ -181,7 +213,7 @@ while(<IC>) {
  ($MSG,$TTP,$SID,$AID,$IDT,$FID,
   $GDT,$GTM,$LDT,$LTM,$CSN,$ALT,$GSP,$TRK,
   $LAT,$LON,$VRT,$SQK,$ALE,$EMG,$SPI,$IOG,@r)=split(",",$icparm); 
-  	printf STDERR "\rIC %s ID %s", POSIX::strftime("%F %T", localtime($ictstamp)), POSIX::strftime("%F %T", localtime($ictstamp));
+#  	printf STDERR "\rIC %s ID %s", POSIX::strftime("%F %T", localtime($ictstamp)), POSIX::strftime("%F %T", localtime($ictstamp));
 
 
  if($ictstamp > $idtstamp){
@@ -192,7 +224,7 @@ while(<IC>) {
    ($idMSG,$idTTP,$idSID,$idAID,$idIDT,$idFID,
     $idGDT,$idGTM,$idLDT,$idLTM,$idCSN,$idALT,$idGSP,$idTRK,
     $idLAT,$idLON,$idVRT,$idSQK,$idALE,$idEMG,$idSPI,$idIOG,@r)=split(",",$idparm);
-	printf STDERR "\rIC %s ID %s", POSIX::strftime("%F %T", localtime($ictstamp)), POSIX::strftime("%F %T", localtime($ictstamp));
+#	printf STDERR "\rIC %s ID %s", POSIX::strftime("%F %T", localtime($ictstamp)), POSIX::strftime("%F %T", localtime($ictstamp));
    if(($idTTP == 1)&&($idCSN ne "")){
     if($callsign{$idIDT} eq ""){
 #     printf"new call sign for $idIDT: $idCSN\n";
@@ -208,7 +240,7 @@ while(<IC>) {
 
 #
  if($ictstamp < ($orgictstamp+$starttime)){next;}
- $ALT=$ALT*0.305;
+ $ALT=$ALT*0.305; #feet to meters
  if($TTP == 3){
   if(($LAT ne "")&&($LON ne "")&&($ALT ne "")){
 #    printf"1 $minlat : $LAT : $maxlat - $minlon : $LON : $maxlon\n";
@@ -271,8 +303,8 @@ while(<IC>) {
 
      printf O "\n";
      printf O "  <Placemark>\n";
-#	 printf STDERR "%s %f %s\n", $callsign{$key}, $altitude{$key,$ix{$key}}, StyleFromAltitude($altitude{$key,$ix{$key}});
-     printf O "   <styleUrl>#%s</styleUrl>\n", StyleFromAltitude($altitude{$key,$ix{$key}});
+#	 printf STDERR "%s %f %s\n", $callsign{$key}, $altitude{$key,$ix{$key}}, GroundStyle($altitude{$key,$ix{$key}});
+     printf O "   <styleUrl>#%s</styleUrl>\n", GroundStyle($altitude{$key,$ix{$key}});
      printf O "   <TimeSpan>\n";
      printf O "   <begin>$tstring</begin>\n";
      printf O "   <end>$tstringend</end>\n";
@@ -282,7 +314,7 @@ while(<IC>) {
      printf O "    <altitudeMode>absolute</altitudeMode>\n";
      printf O "    <outerBoundaryIs>\n";
      printf O "     <LinearRing>\n";
-     printf O "      <extrude>1</extrude>\n";
+     printf O "      <extrude>0</extrude>\n";
      printf O "      <coordinates>\n";
      printf O "       %s,%s,%s\n",$longitude{$key,$ix{$key}}-$cw,$latitude{$key,$ix{$key}}-$cw,$altitude{$key,$ix{$key}};
      printf O "       %s,%s,%s\n",$longitude{$key,$ix{$key}}+$cw,$latitude{$key,$ix{$key}}-$cw,$altitude{$key,$ix{$key}};
@@ -297,7 +329,7 @@ while(<IC>) {
 #
      printf O "\n";
      printf O "  <Placemark>\n";
-     printf O "   <styleUrl>#AirToAir</styleUrl>\n";
+     printf O "   <styleUrl>#%s</styleUrl>\n", AirStyle($altitude{$key,$ix{$key}});
      printf O "   <TimeSpan>\n";
      printf O "   <begin>$tstring</begin>\n";
      printf O "   <end>$tstringend</end>\n";
