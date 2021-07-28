@@ -6,10 +6,10 @@ use POSIX;
 
 #This program requires the 1:0:1 file and will count how many unique hardware identifiers are recieved.
 
-my %tallys; #Tallys holds the date as the key and the count as the value
 my @dates; #Array holding all dates to count
 my $total = 0; #just the total number of hwids in the time period
 my $totalalts = 0; #for averaging the averages.
+my $totaltotalairportplanes = 0; #number of airport planes from each day summed.
 my %dayofweek; #Holds the date in yyyymmdd format as key and the corresponding day of week as value
 my $counter = 0; #Counter of what to divide totalalt by to get avg alt
 
@@ -24,6 +24,7 @@ print "Enter end date:";
 my $Edate = <STDIN>;
 chomp $Edate;
 my $Etime = str2time($Edate);
+print "\n";
 
 
 while($Stime <= $Etime) {
@@ -35,74 +36,111 @@ while($Stime <= $Etime) {
 
 sub count {
 	my $date = shift;
-	my $if = "/home/colin/example-project/data/$date/198.202.124.3-HPWREN:MW-ADSB:1:1:0"; #WON'T WORK WITH wc-adsb
+	my $if = "/home/colin/example-project/data/$date/198.202.124.3-HPWREN:MW-ADSB:3:1:0"; #WON'T WORK WITH wc-adsb
 	my %list; #This hash holdes the hwID as a key and 1 as the value
+	my %AirportPlanes;
 	my $totalalt = 0;
 	my $maxalt = 0;
 	my $minalt = 0;
 	my $avgalt = 0;
+	my %results;
 
-	open(my $data, "<", $if) or die("Failed to open 1:1:0 data file for $date\n");
+	open(my $data, "<", $if) or die("Failed to open 3:1:0 data file for $date\n");
 	while(<$data>) {
 		my @pieces = split(" ", $_);
 		my $msg = $pieces[3];
 		@pieces = split(",", $msg);	
 		my $hardwareID = $pieces[4];
-		$list{$hardwareID} = 1; #When a hwID is repeated, it overwrites the old one so none are duplicated.	
-	}
-	close $data;
-	
-	if ($doaltitude eq 'a') {
-		$if = "/home/colin/example-project/data/$date/198.202.124.3-HPWREN:MW-ADSB:3:1:0";
-		open(my $data3, "<", $if) or die("Failed to open 3:1:0 data file for $date\n");
-		while(<$data3>) {
-			my @pieces = split(" ", $_);
-			my $msg = $pieces[3];
-			@pieces = split(",", $msg);
-			my $alt = $pieces[11];
-			next if ($pieces[11] eq "");
-			
+		my $alt = $pieces[11];
+		my $lat = $pieces[14];
+		my $lon = $pieces[15];
+		
+		unless($AirportPlanes{$hardwareID}) {
+			if ($alt && $lat && $lon) {
+				if($lon > -117.208267 and $lon < -117.171544 and $lat > 32.728620 and $lat < 32.739223 and $alt < 700) { #Check if plane is inside SAN airspace
+					$AirportPlanes{$hardwareID} = "SAN";
+				}
+			}
+		}
+		
+		$list{$hardwareID} = 1; #When a hwID is repeated, it overwrites the old one so none are duplicated.
+		
+		if ($doaltitude eq 'a' and $alt ne "") {
 			$totalalt = $alt + $totalalt;
 			$counter++;
 	
 			if ($counter == 1 or $alt < $minalt) {$minalt = $alt};
 			if ($alt > $maxalt) {$maxalt = $alt};
 		}
-		$avgalt = ($totalalt / $counter);
-		close $data3;
 	}
-	return
-		scalar (keys %list), #scalar countes the length of array, keys returns an array of all the keys in list.
-		$maxalt,
-		$minalt,
-		$avgalt;
+	
+	if ($doaltitude eq 'a') {$avgalt = ($totalalt / $counter)};
+	close $data;
+	
+#	if ($doaltitude eq 'a') {
+#		$if = "/home/colin/example-project/data/$date/198.202.124.3-HPWREN:MW-ADSB:3:1:0";
+#		open(my $data3, "<", $if) or die("Failed to open 3:1:0 data file for $date\n");
+#		while(<$data3>) {
+#			my @pieces = split(" ", $_);
+#			my $msg = $pieces[3];
+#			@pieces = split(",", $msg);
+#			my $alt = $pieces[11];
+#			next if ($pieces[11] eq "");
+#			
+#			$totalalt = $alt + $totalalt;
+#			$counter++;
+#	
+#			if ($counter == 1 or $alt < $minalt) {$minalt = $alt};
+#			if ($alt > $maxalt) {$maxalt = $alt};
+#		}
+#		$avgalt = ($totalalt / $counter);
+#		close $data3;
+#	}
+
+	foreach my $airport (values %AirportPlanes) {
+		$results{"number-of-$airport-planes"}++;
+		$results{'number-of-any-airport-planes'}++; #This assumes a plane is at only one airport
+	}
+	
+	$results{'total-number-of-planes'} = scalar(keys %list);
+	$results{'minalt'} = $minalt;
+	$results{'maxalt'} = $maxalt;
+	$results{'avgalt'} = $avgalt;
+	
+	return %results
 }
 
-print '[Date] : [Day of week] : [Count]';
-if ($doaltitude eq 'a') {print ' : [MinAlt] : [MaxAlt] : [AvgAlt]'};
+printf "%8s : %-13s : %7s : %20s", "[Date]", "[Day of week]", "[Count]", "[Planes at airports]";
+if ($doaltitude eq 'a') {printf " : %8s : %8s : %8s", "[MinAlt]", "[MaxAlt]", "[AvgAlt]"};
 print "\n";
 open(my $OF, ">", "/home/colin/example-project/results/count.txt") or die "Failed to open output file: $!";
 foreach my $date (@dates) {
-	my ($tally, $maxalt, $minalt, $avgalt) = count($date); #$tally and $tallys are very similar
-	$tallys{$date} = $tally; #Stores the count for that date in the hash, I don't think this is actually necessary.
+	my %results = count($date);
+	my $tally = $results{'total-number-of-planes'};
+	my $maxalt = $results{'maxalt'};
+	my $avgalt = $results{'avgalt'};
+	my $minalt = $results{'minalt'};
+	my $totalairportplanes = $results{'number-of-any-airport-planes'};
 	
 	#Printing to cmd line
-	print "$date : $dayofweek{$date} : $tally";
-	if ($doaltitude eq 'a') {printf " : %d : %d : %d", $minalt, $maxalt, $avgalt};
+	printf "%8d : %-13s : %7d : %20d", $date, $dayofweek{$date}, $tally, $totalairportplanes;
+	if ($doaltitude eq 'a') {printf " : %8d : %8d : %8d", $minalt, $maxalt, $avgalt};
 	print "\n";
 	
 	#Printing to resutls file
 	my $dateformatted = POSIX::strftime('%Y-%m-%d', localtime(str2time($date))); #converts date to unix time, then back to normal date but with -dashes-
-	print $OF "$dateformatted,$dayofweek{$date},$tally";
+	print $OF "$dateformatted,$dayofweek{$date},$tally,$totalairportplanes";
 	if ($doaltitude eq 'a') {print $OF ",$minalt,$maxalt,$avgalt"};
 	print $OF "\n";
 	
 	$total = $total + $tally;
 	$totalalts = $totalalts + $avgalt;
+	$totaltotalairportplanes = $totaltotalairportplanes + $totalairportplanes;
 }
 
 my $days = scalar (@dates);
 my $finalavgalt = $totalalts / $days;
-print "Total ($days days) : $total";
-if ($doaltitude eq 'a') {printf " : Average altitude of %d", $finalavgalt};
+my $avgairportplanes = $totaltotalairportplanes / $days;
+print "Total: $days days, $total planes, $avgairportplanes planes at airports on average";
+if ($doaltitude eq 'a') {printf ", average altitude of %d", $finalavgalt};
 print "\n";
