@@ -4,7 +4,10 @@ use warnings;
 use Date::Parse;
 use POSIX;
 
-#This program requires the 1:0:1 file and will count how many unique hardware identifiers are recieved.
+#usage: perl count.pl [a=eval altitude] startdate enddate data_dir output_file
+#example: perl count.pl a 20200101 20200101 /home/colin/example-project/data/ /home/colin/example-project/results/count.dat
+
+#This program requires the 3:0:1 file and will count how many unique hardware identifiers are recieved.
 
 my @dates; #Array holding all dates to count
 my $total = 0; #just the total number of hwids in the time period
@@ -13,19 +16,17 @@ my $totaltotalairportplanes = 0; #number of airport planes from each day summed.
 my %dayofweek; #Holds the date in yyyymmdd format as key and the corresponding day of week as value
 my $counter = 0; #Counter of what to divide totalalt by to get avg alt
 
-my $doaltitude = shift; #just add "a" to end of perl command to evaluate altitude data.
-$doaltitude = "x" unless defined $doaltitude;
+my $doaltitude = "x";
+if ($ARGV[0] eq "a") {$doaltitude = shift};
 
-print "Enter start date (yyyymmdd):"; #This block querys for the start and end dates and adds each day in the range to an array.
-my $Sdate = <STDIN>;
-chomp $Sdate;
+if ($ARGV[0] eq "") {die "enter date range"};
+if ($ARGV[1] eq "") {die "enter end date"};
+my $Sdate = $ARGV[0]; #This block adds each day in the start and end date range to an array.
 my $Stime = str2time($Sdate); #srt2time converts the date into unix timestamp $Stime
-print "Enter end date:";
-my $Edate = <STDIN>;
-chomp $Edate;
+my $Edate = $ARGV[1];
 my $Etime = str2time($Edate);
-print "\n";
-
+my $datadir = $ARGV[2];
+my $output = $ARGV[3];
 
 while($Stime <= $Etime) {
 	my $ymd = POSIX::strftime('%Y%m%d', localtime($Stime)); #converts $Stime back into yyyymmdd format
@@ -36,7 +37,7 @@ while($Stime <= $Etime) {
 
 sub count {
 	my $date = shift;
-	my $if = "/home/colin/example-project/data/$date/198.202.124.3-HPWREN:MW-ADSB:3:1:0"; #WON'T WORK WITH wc-adsb
+	my $if = "$datadir/$date/198.202.124.3-HPWREN:MW-ADSB:3:1:0"; #WON'T WORK WITH wc-adsb
 	my %list; #This hash holdes the hwID as a key and 1 as the value
 	my %AirportPlanes;
 	my $totalalt = 0;
@@ -76,26 +77,6 @@ sub count {
 	
 	if ($doaltitude eq 'a') {$avgalt = ($totalalt / $counter)};
 	close $data;
-	
-#	if ($doaltitude eq 'a') {
-#		$if = "/home/colin/example-project/data/$date/198.202.124.3-HPWREN:MW-ADSB:3:1:0";
-#		open(my $data3, "<", $if) or die("Failed to open 3:1:0 data file for $date\n");
-#		while(<$data3>) {
-#			my @pieces = split(" ", $_);
-#			my $msg = $pieces[3];
-#			@pieces = split(",", $msg);
-#			my $alt = $pieces[11];
-#			next if ($pieces[11] eq "");
-#			
-#			$totalalt = $alt + $totalalt;
-#			$counter++;
-#	
-#			if ($counter == 1 or $alt < $minalt) {$minalt = $alt};
-#			if ($alt > $maxalt) {$maxalt = $alt};
-#		}
-#		$avgalt = ($totalalt / $counter);
-#		close $data3;
-#	}
 
 	foreach my $airport (values %AirportPlanes) {
 		$results{"number-of-$airport-planes"}++;
@@ -113,7 +94,7 @@ sub count {
 printf "%8s : %-13s : %7s : %20s", "[Date]", "[Day of week]", "[Count]", "[Planes at airports]";
 if ($doaltitude eq 'a') {printf " : %8s : %8s : %8s", "[MinAlt]", "[MaxAlt]", "[AvgAlt]"};
 print "\n";
-open(my $OF, ">", "/home/colin/example-project/results/count.txt") or die "Failed to open output file: $!";
+open(my $OF, ">", $output) or die "Failed to open output file: $!";
 foreach my $date (@dates) {
 	my %results = count($date);
 	my $tally = $results{'total-number-of-planes'};
