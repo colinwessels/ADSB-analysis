@@ -1,24 +1,21 @@
-# To run from perl cmd, do 'perl hvb-atc.pl [date] [minutes]
+#usage: perl hvb-atc.pl input_dir output_file.kml [minutes]
+#example: perl hvb-atc.pl /home/colin/example-project/data /home/colin/example-project/results/results.kml 20
 
 #!/usr/local/bin/perl
 
 # ./sbs1-id.pl 20200511 MW-ADSB
 use POSIX;
 
-my $date = shift;
+my $dirname = shift; #This dir should contain both data files
+my $OF = shift;
 my $minutes = shift;
 
-$dirname="/home/colin/example-project/data/$date";
-#die "$dirname: $!" unless -d $dirname;
+if ($dirname eq "" or $OF eq "") {die "usage: perl hvb-atc.pl input_dir output_file.kml [minutes]"};
+unless (defined $minutes ) {$minutes = 90};
+die "$dirname: $!" unless -d $dirname;
 
 $site='MW-ADSB';
-if($site eq ""){die "use sbs1-id.pl directory site"};
-
-if($date eq "") {
-	print "Enter date: \n";
-	$date = <STDIN>;
-	chomp $date;
-}
+#if($site eq ""){die "use sbs1-id.pl directory site"};
 
 $idtstamp=0;
 $maxage=20;     # max age in seconds
@@ -38,13 +35,12 @@ $starttime=7*3600;		# number of seconds from beginning of file
 $endtime=$starttime+($minutes*60);	# number of seconds from beginning of file
 
 
-unless (open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0")) { #Prompts user to change $site to wc-adsb if it fails to open file
+unless (open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0")) { #changes $site to wc-adsb if it fails to open file
  $site = 'wc-adsb';
  open(ID,"$dirname/198.202.124.3-HPWREN:${site}:1:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:1:1:0");
 }
 open(IC,"$dirname/198.202.124.3-HPWREN:${site}:3:1:0") || die("Cannot open input file $dirname/198.202.124.3-HPWREN:${site}:3:1:0");
 
-$OF = "/home/colin/example-project/results/$date.kml";
 open(O,">$OF") || die "$OF: $!";
 printf O "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
 printf O "<kml xmlns=\"http://earth.google.com/kml/2.0\">\n";
@@ -117,7 +113,7 @@ printf O "  </Style>\n";
 printf O "\n";
 printf O "  <Style id=\"ToGroundLow\">\n"; #diffeernt styles have different colors
 printf O "   <LineStyle>\n";
-printf O "    <color>7f0000ff</color>\n"; #color is AABBGGRR
+printf O "    <color>7f0000ff</color>\n"; #color format is AABBGGRR
 printf O "    <width>2</width>\n";
 printf O "   </LineStyle>\n";
 printf O "   <PolyStyle>\n";
@@ -207,7 +203,7 @@ while(<IC>) {
  ($icorig,$icid,$ictstamp,$icparm,@r)=split(" ",$_);
  if($orgictstamp eq ""){
 	 $orgictstamp=$ictstamp;
-	 print STDERR "start time: ", POSIX::strftime('%F %T', localtime($orgictstamp)), "\n";
+	 print STDERR "start time: ", POSIX::strftime('%F %T', localtime($orgictstamp)), "\n"; #It is messed up, i don't know why, but it works anyway.
 	 print STDERR "end time: ", POSIX::strftime('%F %T', localtime($orgictstamp+$endtime)), "\n";
 	 }
  ($MSG,$TTP,$SID,$AID,$IDT,$FID,
