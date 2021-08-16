@@ -27,6 +27,7 @@ my $Edate = $ARGV[1];
 my $Etime = str2time($Edate);
 my $datadir = $ARGV[2];
 my $output = $ARGV[3];
+if (-d $output) {$output = "$output/${Sdate}-${Edate}count.dat";}
 
 while($Stime <= $Etime) {
 	my $ymd = POSIX::strftime('%Y%m%d', localtime($Stime)); #converts $Stime back into yyyymmdd format

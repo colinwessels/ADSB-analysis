@@ -11,7 +11,7 @@ my $OF = shift;
 my $minutes = shift;
 
 if ($dirname eq "" or $OF eq "") {die "usage: perl hvb-atc.pl input_dir output_file.kml [minutes]"};
-unless (defined $minutes ) {$minutes = 90};
+unless (defined $minutes ) {$minutes = 30};
 die "$dirname: $!" unless -d $dirname;
 
 $site='MW-ADSB';
