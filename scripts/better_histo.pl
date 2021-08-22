@@ -13,30 +13,22 @@ my $totalalts = 0; #for averaging the averages.
 my $totaltotalairportplanes = 0; #number of airport planes from each day summed.
 my %dayofweek; #Holds the date in yyyymmdd format as key and the corresponding day of week as value
 my $counter = 0; #Counter of what to divide totalalt by to get avg alt
-my $timebinsize = 60;
-my $altbinsize = 10000;
+my $timebinsize = 86400; #in sec
+my $altbinsize = 10000; #in ft
+my $timebinoffset = 0; #works for daylight savings time, 8 hrs for std time.
 
-#print STDERR "Enter start date (yyyymmdd):"; #This block adds each day in the range to an array.
-my $Sdate = $ARGV[0];
-chomp $Sdate;
-my $Stime = str2time($Sdate); #srt2time converts the date into unix timestamp $Stime
-#print STDERR "Enter end date:";
-my $Edate = $ARGV[1];
-chomp $Edate;
-my $Etime = str2time($Edate);
-#print STDERR "\n";
-my $datadir = $ARGV[2];
-my $output = $ARGV[3];
+my $date = $ARGV[0];  #eg. 20200101
+my $datadir = $ARGV[1];
+my $output = $ARGV[2];
 
 $ENV{TZ}="US/Pacific";
 
-unless (defined $Sdate and defined $Edate and defined $datadir and defined $output) {die "usage: perl getalts.pl startdate enddate data_directory output_file-alts.dat"};
-
-while($Stime <= $Etime) {
-	my $ymd = POSIX::strftime('%Y%m%d', gmtime($Stime)); #converts $Stime back into yyyymmdd format
-	push @dates, $ymd;
-	$dayofweek{$ymd} = POSIX::strftime('%a', gmtime($Stime)); #Assigns the day of week corresponding to $Stime to the hash
-	$Stime = $Stime +24*60*60; #Adds one day to unix timestamp
+if ($timebinsize == 86400) { #calculates time bin offset
+	die unless $date =~ /(\d\d\d\d)(\d\d)(\d\d)/;
+	my $t1 = str2time("$1-$2-$3 00:00:00 UTC");
+	my $t2 = str2time("$1-$2-$3 00:00:00 ");
+	$timebinoffset = $t2-$t1;
+	print STDERR "timebinoffset is $timebinoffset\n";
 }
 
 sub count {
@@ -52,11 +44,11 @@ sub count {
 	my %alts;
 
 	open(my $OF, ">", $output) or die "Failed to open output file: $!";
-	open(my $data, "<", $if) or die("Failed to open 3:1:0 data file for $date\n");
+	open(my $data, "<", $if) or die("Failed to open 3:1:0 data file '$if'\n");
 	while(<$data>) {
 		my @pieces = split(" ", $_);
 		my $msg = $pieces[3];
-		my $timestamp = int($pieces[2]/$timebinsize)*$timebinsize;
+		my $timestamp = int(($pieces[2]-$timebinoffset)/$timebinsize)*$timebinsize+$timebinoffset;
 		
 		@pieces = split(",", $msg);	
 		next if $pieces[11] eq "";
@@ -87,6 +79,5 @@ sub count {
 		print $OF "\n";
 	}
 }
-foreach my $date (@dates) {
-	count($date);
-}
+
+count($date);
