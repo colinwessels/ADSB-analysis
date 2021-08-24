@@ -3,7 +3,7 @@ set title "Altitude Distribution ".ARG2
 set style data filledcurves
 set xdata time
 set timefmt "%H:%M"
-set xlabel "Time of Day (GMT)"
+set xlabel "Time of Day (PST)"
 set ylabel "Count of planes"
 set xtics format "%H:%M"
 set xtics rotate
