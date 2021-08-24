@@ -13,7 +13,7 @@ my $totalalts = 0; #for averaging the averages.
 my $totaltotalairportplanes = 0; #number of airport planes from each day summed.
 my %dayofweek; #Holds the date in yyyymmdd format as key and the corresponding day of week as value
 my $counter = 0; #Counter of what to divide totalalt by to get avg alt
-my $timebinsize = 86400; #in sec
+my $timebinsize = 60; #in sec
 my $altbinsize = 10000; #in ft
 my $timebinoffset = 0; #works for daylight savings time, 8 hrs for std time.
 
