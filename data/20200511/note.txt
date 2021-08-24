@@ -1,0 +1,6 @@
+This is where the data would be downloaded if you follow the example instructions in README.
+
+$ ls -l .
+total 254905
+-rw-rw-r-- 1 colin colin  20509627 May 12  2020 198.202.124.3-HPWREN:MW-ADSB:1:1:0
+-rw-rw-r-- 1 colin colin 240149395 May 12  2020 198.202.124.3-HPWREN:MW-ADSB:3:1:0
