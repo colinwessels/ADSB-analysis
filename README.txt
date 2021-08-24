@@ -5,8 +5,9 @@ you will find all of the perl scripts you can use. Some make .kml files which ca
 google earth, and some make data files intended to be read by a graphing program. In the data folder,
 you will find mostly nothing. This is where I kept all of my raw data. Each date had it's own folder
 in yyyymmdd format, and inside each date folder were the two data files. In the results folder, 
-you will again find mostly nothing. I've left the folders which contain different results, some 
-graphing scripts which will read from the output of the scripts, and most importantly, some makefiles 
+you will again find mostly nothing. I've left one data worth of results. Two different types of graphs
+can be found in each subfolder altdist/ and betterhisto/, each one having a graphing script which 
+will read from the output of the perl scripts, and most importantly, some makefiles 
 to simplify the process of parsing the raw data. If you prefer, you don't have to use
 this same file structure. Directories are not hard coded into the scripts, but they are for the 
 makefiles. If you want to use the makefiles, you'll need to have the same file structure as I used.
@@ -28,8 +29,7 @@ instructions right in this directory.
 
 1. In the same directory this file is in, you'll find a folder called scripts. Open it.
 2. Type the following command: '$ perl download.pl --directory ../data -d -h 20200511 20200511'
-** If you want to make a .kml file to open in Google Earth, contiune to step 3. Otherwise, step 4.
-3. Type this command: '$ perl hvb-atc.pl ../data ../results/20200511.kml 10'
+3. If you want to make a .kml file to open in Google Earth, Type'$ perl hvb-atc.pl ../data ../results/20200511.kml 10'
 4. Navigate up one directory, then to the results folder.
 5. If you did step 3, your .kml file will be here for you to open in google earth. Otherwise, contiune.
 6. Navigate to the folder called betterhisto.
